@@ -147,6 +147,10 @@ UNION ALL SELECT 'order_reviews.review_id',
        (SELECT COUNT(*) FROM order_reviews WHERE review_id IS NULL),
        (SELECT COUNT(*) FROM (SELECT review_id FROM order_reviews GROUP BY review_id HAVING COUNT(*)>1) x)
 
+UNION ALL SELECT 'product_cateory_name_translation.product_category_name',
+       (SELECT COUNT(*) FROM product_category_name_translation WHERE product_category_name IS NULL),
+       (SELECT COUNT(*) FROM(SELECT product_category_name FROM product_category_name_translation GROUP BY product_category_name HAVING COUNT (*) > 1) x )
+
 -- composite keys:PK checks for order_items and order_payments
 
 UNION ALL SELECT 'order_items.(order_id+order_item_id)',
