@@ -10,11 +10,6 @@ UNION ALL SELECT 'products', COUNT(*) FROM products
 UNION ALL SELECT 'sellers', COUNT(*) FROM sellers
 UNION ALL SELECT 'product_category_name_translation', COUNT(*) FROM product_category_name_translation;
 
--- Each branch runs a direct COUNT(*) on the whole table (no subquery, no grouping — every row counts equally) 
--- the label is attached right there in the same SELECT, next to the count 
--- UNION ALL stacks every branch's single row into one table. 
--- There's no ORDER BY in this, so the rows just appear in the order, exactly as listed.
-
 
 -- Checking for NULL values
 
@@ -81,12 +76,6 @@ UNION ALL SELECT 'product_category_name_translation', 'product_category_name_eng
 
 ORDER BY null_count DESC;
 
--- Each branch runs two counts on the same table in one pass — COUNT(*) counts every row, 
--- COUNT(column) counts only the rows where that column isn't null — and subtracts them right there,
--- with the label attached in the same SELECT →
--- UNION ALL stacks every branch's single row into one table 
--- ORDER BY null_count DESC then rearranges that whole stacked table, so the columns with the most missing data are on top.
-
 
 -- Check for Duplicate IDs
 
@@ -119,13 +108,8 @@ FROM (SELECT order_id, payment_sequential FROM order_payments GROUP BY order_id,
 
 ORDER BY dup_groups DESC;
 
--- subquery runs and groups first per branch 
--- outer query counts and labels that branch's result 
--- UNION ALL stacks every branch's single row into one table 
--- ORDER BY then rearranges that whole stacked table, so the worst offenders are on top.
 
-
--- Checking for Potential Primary key candidates via checking NULL vales and Duplicate IDs simultaneously
+-- Checking for Potential Primary key candidates via checking NULL values and Duplicate IDs simultaneously
 
 SELECT 'customers.customer_id' AS candidate,
        (SELECT COUNT(*) FROM customers WHERE customer_id IS NULL) AS nulls,
@@ -162,13 +146,6 @@ UNION ALL SELECT 'order_payments.(order_id+payment_sequential)',
        (SELECT COUNT(*) FROM (SELECT order_id, payment_sequential FROM order_payments GROUP BY order_id, payment_sequential HAVING COUNT(*)>1) x)
 
 ORDER BY nulls DESC, dup_groups DESC;
-
--- Each branch runs two independent scalar subqueries side by side in the same row
--- one counting nulls directly with COUNT(*) WHERE col IS NULL, 
--- the other grouping first inside a nested subquery then counting the duplicate groups with an outer COUNT(*) 
--- both land next to the label in the same SELECT → UNION ALL stacks every branch's row into one table 
--- ORDER BY nulls DESC, dup_groups DESC then rearranges that whole stacked table, without removing anything,
--- so any candidate that fails on nulls first, and duplicates second, rises to the top.
 
 
 -- Basic data consistency checks
@@ -212,11 +189,6 @@ FROM order_items oi
 WHERE NOT EXISTS (SELECT 1 FROM order_payments op WHERE op.order_id = oi.order_id)
 
 ORDER BY orphaned_rows DESC;
-
--- For each row in the child table, NOT EXISTS runs a tiny lookup against the parent table asking
--- Is there a row here whose key matches mine?
--- If no match is found, that child row is "orphaned" — it references something that doesn't exist.
--- Counting how many rows fail this lookup tells you how many broken links there are.
 
 
 -- Consistency checks: comparing columns within the same row
