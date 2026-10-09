@@ -1,36 +1,45 @@
-
 Olist E-Commerce SQL Analysis
 
-An end-to-end PostgreSQL project: raw CSVs → validated, constrained relational database → 10 business-question analyses answered in pure SQL.
+An end-to-end PostgreSQL project: raw CSVs → validated, 
+constrained relational database → 10 business-question analyses answered in pure SQL.
 
 Dataset: Olist Brazilian E-Commerce Public Dataset — ~100K orders from a Brazilian multi-seller marketplace, covering 2016–2018.
 
 Tools: PostgreSQL, pgAdmin, VS Code SQL tooling.
 
-Project Structure
+Project Structure :
+
 sql_load/          Build & validate the database (6 files)
 sql_queries/       Answer 10 business questions in SQL (10 files)
 csv_files/         Raw source data
+
 Part 1 — Building the Database (sql_load/)
-File	Purpose
-01_create_database.sql	Creates the olist_operations database
-02_create_tables.sql	Defines the 9-table schema with explicit types
-03_load_data.sql	Bulk-loads all 9 CSVs via \copy
-04_data_quality.sql	Full audit: row counts, nulls, duplicates, referential integrity, and logical consistency
-05_add_constraints.sql	Adds PRIMARY KEY, FOREIGN KEY, and CHECK constraints
-06_add_indexes.sql	Indexes foreign key columns not already covered by a primary key
-Key Design Decisions
-Zip code columns are VARCHAR(5), not INT — 24–33% of zip codes across customers, sellers, and geolocation have a leading zero, which an integer type would silently strip.
-Loads use \copy, not server-side COPY — runs under the client's file permissions instead of requiring direct server filesystem access.
-Data Quality Audit — Key Findings
+
+File	Purpose :
+
+01_create_database.sql ->	Creates the olist_operations database
+02_create_tables.sql ->	Defines the 9-table schema with explicit types
+03_load_data.sql ->	Bulk-loads all 9 CSVs via \copy
+04_data_quality.sql ->	Full audit: row counts, nulls, duplicates, referential integrity, and logical consistency
+05_add_constraints.sql ->	Adds PRIMARY KEY, FOREIGN KEY, and CHECK constraints
+06_add_indexes.sql	-> Indexes foreign key columns not already covered by a primary key
+
+Key Design Decisions :
+
+Zip code columns are VARCHAR(5), not INT —> 24–33% of zip codes across customers, sellers, and geolocation have a leading zero, which an integer type would silently strip. ( Also due to the fact that brazilian zip codes start with zero) 
+
+*** Loads use \copy, not server-side COPY — runs under the client's file permissions instead of requiring direct server filesystem access. 
+
+Data Quality Audit — Key Findings :
 
 A four-layer audit (volume → column-level nulls → row-level uniqueness → cross-table/cross-column consistency) surfaced:
 
-Finding	Detail
-review_id is not unique	814 duplicate values — excluded from PRIMARY KEY candidacy
+Finding	Detail:
+
+***review_id is not unique, (814)789 duplicate values —> excluded from PRIMARY KEY candidacy
 geolocation has no natural key	~26% exact full-row duplicates by design; no PRIMARY KEY added
-2 product categories missing translations	Resolved with a targeted data patch before adding the FK
-830 orphaned payment rows	Payments referencing an order with zero matching line items (775 distinct orders)
+***2 product categories missing translations	Resolved with a targeted data patch before adding the FK
+830 orphaned payment rows,	Payments referencing an order with zero matching line items (775 distinct orders)
 1,382 logically impossible date sequences	Carrier/delivery dates preceding an earlier stage of the same order
 8 status/data mismatches	Orders marked delivered with no delivery date on file
 
@@ -38,7 +47,8 @@ Final schema: 7 primary keys (5 single-column, 2 composite), 7 foreign keys, 4 c
 
 Part 2 — Business Analysis (sql_queries/)
 
-Every question follows the same structure: Business Question → SQL Analysis → Key Finding → Business Recommendation.
+Every question follows the same structure: 
+Business Question → SQL Analysis → Key Finding → Business Recommendation.
 
 01_create_view.sql sets up a valid_orders view (built on the audit above) that excludes the 1,382+8 rows with impossible date sequences and status/date mismatches — every downstream file that touches delivery timing builds on this view instead of re-filtering the raw orders table.
 
@@ -48,13 +58,13 @@ Q1 — Total revenue and how it changed over time
 
 Finding: Total revenue is R$15.21M across 95,097 delivered orders. Revenue grew steadily through 2017, peaking at R$1.15M in November 2017 (likely a Black Friday effect), then plateaued in the R$1.0–1.13M/month range from March 2018 onward — the business shifted from early growth into a maturing, steady-state phase.
 
-Recommendation: Investigate whether the November 2017 spike is repeatable seasonal demand worth planning around. The 2018 plateau is a "growth has stalled" signal, distinct from — and less urgent than — an actual decline.
+Recommendation: Investigate whether the November 2017 spike is repeatable seasonal demand worth planning around. The 2018 plateau is a "growth has stalled" signal, distinct from — and less urgent than an actual decline.
 
 Q2 — Which product categories drive the most revenue?
 
 (03_product_analysis.sql)
 
-Finding: health_beauty, watches_gifts, and bed_bath_table are the only categories crossing R$1M. The top 10 categories (of 74) generate 62.4% of total revenue — a concentrated business.
+***Finding: health_beauty, watches_gifts, and bed_bath_table are the only categories crossing R$1M. The top 10 categories (of 74) generate 62.4% of total revenue — a concentrated business.
 
 Recommendation: Focus inventory, seller recruitment, and marketing on the top 10. Separately, computers stands out with 2× the revenue-per-order of any other major category despite low volume — a distinct high-ticket growth opportunity.
 
@@ -94,7 +104,7 @@ Q7 — Customer satisfaction and what drives low scores
 
 (08_customer_satisfaction.sql)
 
-Finding: Average review score is 4.09/5, with a bimodal distribution (57.8% give a 5, 11.5% give a 1 — few in between). The single strongest relationship found: late delivery drops average score from 4.29 to 2.57 — a much larger effect than any category-level difference.
+Finding: Average review score is ***(4.09/5) 4.29/5, with a bimodal distribution (57.8% give a 5, 11.5% give a 1 — few in between). The single strongest relationship found: late delivery drops average score from 4.29 to 2.57 — a much larger effect than any category-level difference.
 
 Recommendation: Delivery reliability is the highest-leverage satisfaction lever, not product quality. Fixing lateness in the Q6 hotspot states could potentially move platform-wide satisfaction more than any category-specific fix.
 
@@ -102,9 +112,9 @@ Q8 — Repeat purchases and retention
 
 (09_customer_retention.sql)
 
-Finding: Repeat purchase rate is just 3.0% (2,801 of 93,358 unique customers, correctly grouped by customer_unique_id). Repeat customers generate a disproportionately small 5.6% of revenue.
+Finding: Repeat purchase rate is just ~3.0% ***(2,801) (2744) of 93,358 unique customers, correctly grouped by customer_unique_id). Repeat customers generate a disproportionately small 5.6% of revenue.
 
-Recommendation: This is close to a single-purchase marketplace today. Given Q7's delivery-satisfaction link, testing whether a customer's first-order delivery experience predicts whether they return is a natural, high-value follow-up analysis.
+***Recommendation: This is close to a single-purchase marketplace today. Given Q7's delivery-satisfaction link, testing whether a customer's first-order delivery experience predicts whether they return is a natural, high-value follow-up analysis.
 
 Q9 — Categories/sellers with the highest cancellation or late-delivery rates
 
@@ -118,11 +128,12 @@ Q10 — Categories/sellers with strong sales but poor satisfaction or delivery
 
 (10_business_opportunities.sql)
 
-Finding — the strongest result in the project: office_furniture is the 15th highest-revenue category but has by far the worst review score (3.52) of any top-15 category, well under the 4.09 average. One top-5 revenue seller (973 orders) has an average score of just 3.35, the worst of any major seller.
+***Finding — the strongest result in the project: office_furniture is the 15th highest-revenue category but has by far the worst review score (3.52) of any top-15 category, well under the 4.09 average. One top-5 revenue seller (973 orders) has an average score of just 3.35, the worst of any major seller.
+
 
 Recommendation: office_furniture and that specific seller are the clearest "fix this" opportunities in the whole dataset — real revenue at stake, actively affected by poor fulfillment/satisfaction (per Q7/Q8). A seller-level operational audit is the single highest-leverage next step, given the order volume that one seller alone represents.
 
-Skills Demonstrated
+Skills Demonstrated:
 Schema design with explicit type decisions grounded in real data inspection (not defaults)
 Systematic 4-layer data quality auditing (UNION ALL reporting, scalar subqueries, NOT EXISTS anti-joins)
 Constraint-ordering-aware DDL (data fixes → primary keys → foreign keys → checks → indexes)
@@ -130,4 +141,4 @@ Window functions (LAG, RANK, running/grand totals via SUM() OVER())
 PERCENTILE_CONT for median calculations alongside means
 COALESCE-based fallback logic for incomplete reference data
 Correct grouping-key selection for retention analysis (customer_unique_id vs. customer_id)
-Cross-metric synthesis — connecting findings across files (Q4↔Q6, Q7↔Q8, Q2/Q3↔Q10) rather than treating each question in isolation
+***Cross-metric synthesis — connecting findings across files (Q4↔Q6, Q7↔Q8, Q2/Q3↔Q10) rather than treating each question in isolation
