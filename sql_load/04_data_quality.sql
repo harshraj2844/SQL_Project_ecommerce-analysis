@@ -82,6 +82,9 @@ ORDER BY null_count DESC;
 SELECT 'customers' AS tbl, 'customer_id' AS col, COUNT(*) AS dup_groups
 FROM (SELECT customer_id FROM customers GROUP BY customer_id HAVING COUNT(*) > 1) AS x
 
+UNION ALL SELECT 'customers' AS tbl, 'customer_unique_id' AS col, COUNT(*) AS dup_groups
+FROM (SELECT customer_unique_id FROM customers GROUP BY customer_unique_id HAVING COUNT(*) > 1) AS x
+
 UNION ALL SELECT 'orders', 'order_id', COUNT(*)
 FROM (SELECT order_id FROM orders GROUP BY order_id HAVING COUNT(*) > 1) AS x
 

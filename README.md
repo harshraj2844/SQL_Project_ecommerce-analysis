@@ -46,7 +46,7 @@ Q1 — Total revenue and how it changed over time
 
 (02_revenue_analysis.sql)
 
-Finding: Total revenue is R$15.42M across 96,478 delivered orders. Revenue grew steadily through 2017, peaking at R$1.15M in November 2017 (likely a Black Friday effect), then plateaued in the R$1.0–1.13M/month range from March 2018 onward — the business shifted from early growth into a maturing, steady-state phase.
+Finding: Total revenue is R$15.21M across 95,097 delivered orders. Revenue grew steadily through 2017, peaking at R$1.15M in November 2017 (likely a Black Friday effect), then plateaued in the R$1.0–1.13M/month range from March 2018 onward — the business shifted from early growth into a maturing, steady-state phase.
 
 Recommendation: Investigate whether the November 2017 spike is repeatable seasonal demand worth planning around. The 2018 plateau is a "growth has stalled" signal, distinct from — and less urgent than — an actual decline.
 

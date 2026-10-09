@@ -12,7 +12,7 @@ GROUP BY review_score
 ORDER BY review_score;
 
 -- Step 2: Average review score, on-time vs. late delivery
--- (the single strongest factor tested)
+
 SELECT
     CASE
         WHEN o.order_delivered_customer_date > o.order_estimated_delivery_date THEN 'late'

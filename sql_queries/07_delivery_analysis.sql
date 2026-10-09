@@ -8,28 +8,47 @@
 
 -- Step 1: Overall delivery time (average + median) and late rate
 SELECT
-    ROUND(AVG(order_delivered_customer_date - order_purchase_timestamp), 1) AS avg_delivery_days,
+    ROUND(
+        AVG(EXTRACT(EPOCH FROM (order_delivered_customer_date - order_purchase_timestamp)) / 86400)
+    , 1) AS avg_delivery_days,
+    ROUND(
     PERCENTILE_CONT(0.5) WITHIN GROUP (
-        ORDER BY EXTRACT(DAY FROM order_delivered_customer_date - order_purchase_timestamp)
-    ) AS median_delivery_days,
+        ORDER BY EXTRACT(EPOCH FROM (order_delivered_customer_date - order_purchase_timestamp)) / 86400
+    ) :: numeric, 1 ) AS median_delivery_days,
+
     ROUND(
         100.0 * SUM(CASE WHEN order_delivered_customer_date > order_estimated_delivery_date THEN 1 ELSE 0 END)
         / COUNT(*)
     , 2) AS late_delivery_pct
+
 FROM valid_orders
 WHERE order_status = 'delivered';
 
 -- Step 2: Late-delivery rate by customer state (states with meaningful volume only)
 SELECT
     c.customer_state,
-    ROUND(AVG(o.order_delivered_customer_date - o.order_purchase_timestamp), 1) AS avg_delivery_days,
     ROUND(
-        100.0 * SUM(CASE WHEN o.order_delivered_customer_date > o.order_estimated_delivery_date THEN 1 ELSE 0 END)
-        / COUNT(*)
-    , 1) AS late_pct,
+        AVG(
+            EXTRACT(EPOCH FROM
+                (o.order_delivered_customer_date - o.order_purchase_timestamp)
+            ) / 86400
+        )::numeric,
+        1
+    ) AS avg_delivery_days,
+    ROUND(
+        100.0 * SUM(
+            CASE
+                WHEN o.order_delivered_customer_date > o.order_estimated_delivery_date
+                THEN 1
+                ELSE 0
+            END
+        ) / COUNT(*),
+        1
+    ) AS late_pct,
     COUNT(*) AS orders
 FROM valid_orders o
-JOIN customers c ON o.customer_id = c.customer_id
+JOIN customers c
+    ON o.customer_id = c.customer_id
 WHERE o.order_status = 'delivered'
 GROUP BY c.customer_state
 HAVING COUNT(*) >= 100

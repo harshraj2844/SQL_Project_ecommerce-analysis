@@ -42,3 +42,36 @@ SELECT
 FROM ranked
 WHERE revenue_rank IN (1, 5, 10, 20, 50, 100)
 ORDER BY revenue_rank;
+
+-- Top revenue sellers cross-checked against satisfaction
+WITH seller_stats AS (
+    SELECT
+        oi.seller_id,
+        SUM(oi.price) AS revenue,
+        COUNT(DISTINCT oi.order_id) AS orders
+    FROM valid_orders o
+    JOIN order_items oi ON o.order_id = oi.order_id
+    WHERE o.order_status = 'delivered'
+    GROUP BY oi.seller_id
+),
+seller_scores AS (
+    SELECT
+        oi.seller_id,
+        AVG(r.review_score) AS avg_score
+    FROM valid_orders o
+    JOIN order_items oi ON o.order_id = oi.order_id
+    JOIN order_reviews r ON o.order_id = r.order_id
+    WHERE o.order_status = 'delivered'
+    GROUP BY oi.seller_id
+)
+SELECT
+    ss.seller_id,
+    ss.revenue,
+    ss.orders,
+    ROUND(sc.avg_score, 2) AS avg_review_score,
+    ROUND((SELECT AVG(review_score) FROM order_reviews), 2) AS overall_avg_score
+FROM seller_stats ss
+JOIN seller_scores sc ON ss.seller_id = sc.seller_id
+WHERE ss.orders >= 30
+ORDER BY ss.revenue DESC
+LIMIT 10;
